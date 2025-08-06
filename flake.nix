@@ -22,6 +22,9 @@
               clang-tools
               cmake
               cmake-language-server
+              just
+              (python3.withPackages (ps: [ ps.pytest ]))
+              ruff
             ] ++ (if system == "aarch64-darwin" then [ ] else [ gdb ]);
           };
       });
