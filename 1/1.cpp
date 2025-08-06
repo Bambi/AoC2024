@@ -24,12 +24,18 @@ int main() {
 
   sort(left.begin(), left.end());
   sort(right.begin(), right.end());
-  // for (auto x: right) std::cout << x << std::endl;
 
-  unsigned res{};
-  for (unsigned i=0 ; i<left.size() ; i++)
-    res += std::abs(static_cast<int>(left[i]) - static_cast<int>(right[i]));
+  unsigned distance{};
+  unsigned similitary{};
 
-  std::cout << "Distance: " << res << std::endl;
+  for (unsigned i=0 ; i<left.size() ; i++) {
+    unsigned nb_elements{};
+    distance += std::abs(static_cast<int>(left[i]) - static_cast<int>(right[i]));
+    std::for_each(right.begin(), right.end(), [&](unsigned n) { if (n == left[i]) nb_elements += 1; });
+    similitary += left[i] * nb_elements;
+  }
+
+  std::cout << "Distance: " << distance << std::endl;
+  std::cout << "Similitary score: " << similitary << std::endl;
   return 0;
 }
