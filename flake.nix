@@ -1,33 +1,36 @@
 {
   description = "A Nix-flake-based C/C++ development environment";
 
-  inputs.nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1";
+  inputs = {
+    nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1";
+    flake-parts.url = "github:hercules-ci/flake-parts";
+    devshell.url = "github:numtide/devshell";
+  };
 
-  outputs = inputs:
-    let
-      supportedSystems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
-      forEachSupportedSystem = f: inputs.nixpkgs.lib.genAttrs supportedSystems (system: f {
-        pkgs = import inputs.nixpkgs { inherit system; };
-      });
-    in
-    {
-      devShells = forEachSupportedSystem ({ pkgs }: {
-        default = pkgs.mkShell.override
-          {
-            # Override stdenv in order to change compiler:
-            # stdenv = pkgs.clangStdenv;
-          }
-          {
-            packages = with pkgs; [
-              clang-tools
-              cmake
-              cmake-language-server
-              just
-              (python3.withPackages (ps: [ ps.pytest ]))
-              ruff
-            ] ++ (if system == "aarch64-darwin" then [ ] else [ gdb ]);
-          };
-      });
+  outputs = inputs@{ flake-parts, ... }:
+  # https://flake.parts/module-arguments.html
+  flake-parts.lib.mkFlake { inherit inputs; } (top@{ config, withSystem, moduleWithSystem, ... }: {
+    imports = [
+      inputs.devshell.flakeModule
+    ];
+    systems = [
+      "x86_64-linux"
+    ];
+    perSystem = { config, pkgs, ... }: {
+      devshells.default = {
+        packages = with pkgs; [
+          clang-tools
+          cmake
+          cmake-language-server
+          just
+          (python3.withPackages (ps: [ ps.pytest ]))
+          ruff
+          gdb
+          gcc
+          gnumake
+        ];
+      };
     };
+  });
 }
 
