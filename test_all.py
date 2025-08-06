@@ -1,14 +1,17 @@
 from subprocess import check_output
 
-def d1():
-    with open("1/input", "rb") as input:
+def run(day):
+    with open(str(day) + "/input", "rb") as input:
         out = check_output(
-            [ "./build/1" ],
+            [ "./build/" + str(day) ],
             stdin=input,
         )
     return out.decode('UTF-8')
 
 def test_1():
-    assert d1() == '''Distance: 2086478
+    assert run(1) == '''Distance: 2086478
 Similitary score: 24941624
 '''
+
+def test_2():
+    assert run(2) == "356\n"
