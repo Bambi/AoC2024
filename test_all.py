@@ -15,5 +15,6 @@ def test_2():
     assert run(2, "input") == "356 413\n"
 
 def test_3():
-    assert run(3, "example") == "161\n"
-    assert run(3, "input") == "180233229\n"
+    assert run(3, "example1") == "161 161\n"
+    assert run(3, "example2") == "161 48\n"
+    assert run(3, "input") == "180233229 95411583\n"
