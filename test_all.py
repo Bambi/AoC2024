@@ -1,7 +1,7 @@
 from subprocess import check_output
 
-def run(day):
-    with open(str(day) + "/input", "rb") as input:
+def run(day, inputf):
+    with open(str(day) + "/" + inputf, "rb") as input:
         out = check_output(
             [ "./build/" + str(day) ],
             stdin=input,
@@ -9,7 +9,11 @@ def run(day):
     return out.decode('UTF-8')
 
 def test_1():
-    assert run(1) == "2086478 24941624\n"
+    assert run(1, "input") == "2086478 24941624\n"
 
 def test_2():
-    assert run(2) == "356 413\n"
+    assert run(2, "input") == "356 413\n"
+
+def test_3():
+    assert run(3, "example") == "161\n"
+    assert run(3, "input") == "180233229\n"
