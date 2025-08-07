@@ -14,4 +14,4 @@ Similitary score: 24941624
 '''
 
 def test_2():
-    assert run(2) == "356\n"
+    assert run(2) == "356 413\n"

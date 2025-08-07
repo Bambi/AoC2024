@@ -13,7 +13,39 @@ auto tendency(unsigned a, unsigned b) {
   return Tendency::Wrong;
 }
 
-auto process_level(std::string line) {
+// true: all pairs in list have good and same tendency
+// ignore: index to ignore, set to -1 to not ignore any value
+auto good_tendendy(const std::vector<unsigned> &levels, int ignore) -> bool {
+  unsigned first, second;
+  if (ignore == 0) {
+    first = 1; second = 2;
+  } else if (ignore == 1) {
+    first = 0; second = 2;
+  } else {
+    first = 0; second = 1;
+  }
+  auto first_tend = tendency(levels[first], levels[second]);
+  if (first_tend == Tendency::Wrong)
+    return false;
+  unsigned it{};
+  unsigned prev = levels[first];
+  for (it=second ; it != levels.size() ; ++it) {
+    if (it == ignore) continue;
+    // finish if tendency is changing
+    if (tendency(prev, levels[it]) != first_tend)
+      break;
+    prev = levels[it];
+  }
+  // all good if we got till the end of the levels list
+  if (it == levels.size())
+    return true;
+  return false;
+}
+
+enum class Status: int {
+  Safe, Dampened, Unsafe
+};
+auto process_level(const std::string line) -> Status {
     std::istringstream iss(line);
     std::string elt;
     // store levels in a vector list
@@ -23,32 +55,33 @@ auto process_level(std::string line) {
     }
   
     if (levels.size() < 2)
-      return 0;
+      return Status::Unsafe;
 
-    unsigned prev = levels[0];
-    // set tendency with the first 2 levels & finish if already wrong
-    auto first_tend = tendency(levels[0], levels[1]);
-    if (first_tend == Tendency::Wrong)
-      return 0;
-    unsigned it{};
-    for (it=1 ; it != levels.size() ; ++it) {
-      // finish if tendency is changing
-      if (tendency(prev, levels[it]) != first_tend)
-        break;
-      prev = levels[it];
+    if (good_tendendy(levels, -1))
+      return Status::Safe;
+    else {
+      for (unsigned i=0 ; i<levels.size() ; ++i)
+        if (good_tendendy(levels, i))
+          return Status::Dampened;
+      return Status::Unsafe;
     }
-    // all good if we got till the end of the levels list
-    if (it == levels.size())
-      return 1;
-    return 0;
 }
 
 auto main() -> int {
-  unsigned nb_safe{};
+  unsigned nb_safe{}, nb_damp{};
 
   for (std::string line; std::getline(std::cin, line);) {
-    nb_safe += process_level(line);
+    switch (process_level(line)) {
+      case Status::Safe:
+        nb_safe += 1;
+        break;
+      case Status::Dampened:
+        nb_damp += 1;
+        break;
+      case Status::Unsafe:
+        break;
+    }
   }
-  std::cout << nb_safe << std::endl;
+  std::cout << nb_safe << " " << (nb_safe+nb_damp) << std::endl;
   return 0;
 }
