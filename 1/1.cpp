@@ -16,26 +16,25 @@ void parsing(loc_c &left, loc_c &right) {
   }
 }
 
-int main() {
+auto main() -> int {
   auto left = loc_c();
   auto right = loc_c();
 
   parsing(left, right);  
 
-  sort(left.begin(), left.end());
-  sort(right.begin(), right.end());
+  std::ranges::sort(left);
+  std::ranges::sort(right);
 
   unsigned distance{};
-  unsigned similitary{};
+  unsigned similarity{};
 
   for (unsigned i=0 ; i<left.size() ; i++) {
     unsigned nb_elements{};
     distance += std::abs(static_cast<int>(left[i]) - static_cast<int>(right[i]));
-    std::for_each(right.begin(), right.end(), [&](unsigned n) { if (n == left[i]) nb_elements += 1; });
-    similitary += left[i] * nb_elements;
+    std::ranges::for_each(right, [&](unsigned n) { if (n == left[i]) nb_elements += 1; });
+    similarity += left[i] * nb_elements;
   }
 
-  std::cout << "Distance: " << distance << std::endl;
-  std::cout << "Similitary score: " << similitary << std::endl;
+  std::cout << distance << " " << similarity << std::endl;
   return 0;
 }
