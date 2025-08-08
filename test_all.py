@@ -18,3 +18,6 @@ def test_3():
     assert run(3, "example1") == "161 161\n"
     assert run(3, "example2") == "161 48\n"
     assert run(3, "input") == "180233229 95411583\n"
+
+def test_4():
+    assert run(4, "input") == "2504\n"
