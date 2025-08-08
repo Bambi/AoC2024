@@ -32,6 +32,20 @@ public:
       move(dir);
     }
   }
+  auto pick(enum Direction dir) -> char {
+    Position::directions[static_cast<unsigned>(dir)](*this);
+    if (valid())
+      return data[l][c];
+    return 'X';
+  }
+  auto get_cross() -> std::string {
+    std::string res;
+    for (auto i: { NE, SE, SW, NW }) {
+      Position p(*this);
+      res.push_back(p.pick(i));
+    }
+    return res;
+  }
   auto valid() -> bool {
     return l >= 0 && c >= 0 && l < data.size() && c < data[0].size();
   }
@@ -70,7 +84,7 @@ auto main() -> int {
   const auto cols = read_data(data);
   const auto lines = data.size();
 
-  size_t res{};
+  size_t res1{}, res2{};
   size_t l, c;
   for (l=0 ; l<lines ; l++) {
     for (c=0 ; c<cols ; c++) {
@@ -79,11 +93,20 @@ auto main() -> int {
         pos.move(static_cast<enum Direction>(d), PATSZ-1);
         if (pos.valid()) {
           if (pos.str == PATTERN) {
-            res += 1;
+            res1 += 1;
           }
         }
       }
+      if (data[l][c] == 'A') {
+        Position pos(l, c, data);
+        auto cross = pos.get_cross();
+        if (cross == "MMSS" ||
+            cross == "MSSM" ||
+            cross == "SSMM" ||
+            cross == "SMMS")
+          res2 += 1;
+      }
     }
   }
-  std::cout << res << std::endl;
+  std::cout << res1 << " " << res2 << std::endl;
 }
