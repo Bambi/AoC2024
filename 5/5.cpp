@@ -1,9 +1,7 @@
-// #include <cstddef>
+#include <climits>
+#include <cstddef>
 #include <iostream>
-#include <iterator>
 #include <sstream>
-#include <algorithm>
-// #include <string>
 #include <cstdio>
 #include <vector>
 #include <set>
@@ -27,6 +25,19 @@ struct rule_list_t {
         res.insert(r.second);
     }
     return res;
+  }
+  // return 0 if not found, order index+1 if found
+  auto check_before(size_t idx, update_t &order) {
+    int res = INT_MAX;
+    // get all pages that must be after current page
+    std::set<page_t> to_check = get_before(order[idx]);
+    for (auto i: to_check) {
+      for (size_t x=0 ; x<idx ; x++) {
+        if (order[x] == i && x < res)
+          res = x;
+      }
+    }
+    return res == INT_MAX ? 0 : res+1;
   }
 };
 
@@ -72,28 +83,29 @@ auto main() -> int {
   updatel_t updates;
   parse_rules(rules.rules);
   parse_updates(updates);
-  unsigned res1{};
+  unsigned res1{}, res2{};
 
   // check updates
   for (update_t &upd: updates) {
     if (upd.size() < 2)
       continue;
-    std::set<page_t> prev;
-    prev.insert(upd[0]);
+    size_t i=1;
     bool error{false};
-    for (auto it = std::next(std::begin(upd)) ; it!=std::end(upd) ; ++it) {
-      // get all pages that must be after current page
-      std::set<page_t> after = rules.get_before(*it);
-      std::set<page_t> intersect;
-      std::ranges::set_intersection(prev, after, std::inserter(intersect, std::end(intersect)));
-      if (intersect.size() != 0) {
+    while (i < upd.size()) {
+      int err = rules.check_before(i, upd);
+      if (err) {
         error = true;
-        break;
+        // change order list
+        std::swap(upd[err-1], upd[i]); 
+        i = err; // start again where we swap
+      } else {
+        i++;
       }
-      prev.insert(*it);
     }
-    if (!error)
+    if (error)
+      res2 += get_middle(upd);
+    else
       res1 += get_middle(upd);
   }
-  std::cout << res1 << std::endl;
+  std::cout << res1 << " " << res2 << std::endl;
 }
