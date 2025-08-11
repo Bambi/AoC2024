@@ -27,5 +27,5 @@ def test_5():
     assert run(5, "input") == "4814 5448\n"
 
 def test_6():
-    assert run(6, "ex1") == "41\n"
-    assert run(6, "input") == "5461\n"
+    assert run(6, "ex1") == "41 6\n"
+    assert run(6, "input") == "5461 1836\n"
