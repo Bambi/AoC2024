@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <functional>
 
 auto parse_line(const std::string l, std::vector<size_t> &v) -> size_t {
   size_t res{};
@@ -21,32 +22,46 @@ auto parse_line(const std::string l, std::vector<size_t> &v) -> size_t {
   return res;
 }
 
-auto compute(size_t v, std::vector<size_t> &pr, std::vector<size_t> &nr) {
+auto compute1(size_t v, const std::vector<size_t> &pr, std::vector<size_t> &nr) {
   for (auto val: pr) {
-    auto val1 = v + val;
-    auto val2 = v * val;
-    nr.push_back(val1);
-    nr.push_back(val2);
+    nr.push_back(v + val);
+    nr.push_back(v * val);
   }
 }
 
+auto compute2(size_t v, const std::vector<size_t> &pr, std::vector<size_t> &nr) {
+  for (auto val: pr) {
+    nr.push_back(v + val);
+    nr.push_back(v * val);
+    nr.push_back(std::stol(std::to_string(val)+std::to_string(v)));
+  }
+}
+
+auto calib(size_t goal, const std::vector<size_t> &eq,
+           std::function<void(size_t, const std::vector<size_t>&, std::vector<size_t>&)> compute) -> size_t
+{
+  std::vector<size_t> computedv;
+  computedv.push_back(eq[0]);
+  for (size_t idx=1 ; idx<eq.size() ; idx++) {
+    std::vector<size_t> newv;
+    compute(eq[idx], computedv, newv);
+    computedv = newv;
+  }
+  if (std::ranges::find(computedv, goal) != computedv.end()) {
+    return goal;
+  }
+  return 0;
+}
+
 auto main() -> int {
-  size_t res1{};
+  size_t res1{}, res2{};
   for (std::string line; std::getline(std::cin, line);) {
     std::vector<size_t> eqvals;
     auto goal = parse_line(line, eqvals);
     if (eqvals.size() < 2)
       continue;
-    std::vector<size_t> computedv;
-    computedv.push_back(eqvals[0]);
-    for (size_t idx=1 ; idx<eqvals.size() ; idx++) {
-      std::vector<size_t> newv;
-      compute(eqvals[idx], computedv, newv);
-      computedv = newv;
-    }
-    if (std::ranges::find(computedv, goal) != computedv.end()) {
-      res1 += goal;
-    }
+    res1 += calib(goal, eqvals, compute1);
+    res2 += calib(goal, eqvals, compute2);
   }
-  std::cout << res1 << std::endl;
+  std::cout << res1 << ' ' << res2 << std::endl;
 }
