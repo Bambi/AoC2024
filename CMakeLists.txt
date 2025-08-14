@@ -7,6 +7,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS True)
 set(CMAKE_CXX_CLANG_TIDY clang-tidy -checks=-*,modernize-*)
 set(CMAKE_BUILD_TYPE Debug)
 
-foreach(day RANGE 1 7)
+foreach(day RANGE 1 8)
 add_executable(${day} ${day}/${day}.cpp)
 endforeach()
