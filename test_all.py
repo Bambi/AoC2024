@@ -2,9 +2,13 @@ from subprocess import check_output
 from pytest import mark
 
 def run(day, inputf):
-    with open(str(day) + "/" + inputf, "rb") as input:
+    ddir = dexe = str(day)
+    print(ddir, dexe)
+    if day > 25:
+        ddir = ddir[:-1]
+    with open(ddir + "/" + inputf, "rb") as input:
         out = check_output(
-            [ "./build/" + str(day) ],
+            [ "./build/" + dexe ],
             stdin=input,
         )
     return out.decode('UTF-8')
@@ -25,6 +29,8 @@ def run(day, inputf):
     (7, "input",    "538191549061 34612812972206\n"),
     (8, "ex",       "14\n"),
     (8, "input",    "367\n"),
+    (82, "ex",      "34\n"),
+    (82, "input",   "1285\n"),
 ])
 def test_day(day, file, result):
     assert run(day, file) == result

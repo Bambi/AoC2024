@@ -27,7 +27,7 @@
           ruff
           gdb
           gcc
-          gnumake
+          samurai
         ];
       };
     };

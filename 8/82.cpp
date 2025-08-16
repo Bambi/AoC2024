@@ -56,8 +56,15 @@ auto process(const pos_t &p, const grid_t &g, std::set<pos_t> &a) {
         auto cpos = pos_t(l, i);
         pos_t d = cpos - p; // compute distance
         pos_t npos = p - d;
-        if (g.valid(npos))
+        while (g.valid(npos)) {
           a.insert(npos);
+          npos = npos - d;
+        }
+        npos = p + d;
+        while (g.valid(npos)) {
+          a.insert(npos);
+          npos = npos + d;
+        }
       }
     }
   }

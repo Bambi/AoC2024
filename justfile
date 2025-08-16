@@ -6,10 +6,10 @@ clean:
     rm -rf build
 
 setup:
-    cmake -B build
+    cmake -B build -G Ninja
 
 build:
-    make -C build
+    cmake --build build -j
 
 run:
     pytest
