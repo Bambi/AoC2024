@@ -28,7 +28,11 @@
           gdb
           gcc
           samurai
+          watchexec
         ];
+        serviceGroups.compile.services.rebuild.command = ''
+          watchexec --exts cpp just build
+        '';
       };
     };
   });

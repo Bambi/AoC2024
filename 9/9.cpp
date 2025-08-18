@@ -1,4 +1,5 @@
 #include <cstddef>
+#include <cstdio>
 #include <iostream>
 #include <vector>
 
@@ -38,7 +39,7 @@ auto ffb(unsigned last, const block_t &blk) -> unsigned {
   return blk.size();
 }
 
-auto defrag(block_t &blk) {
+auto defrag1(block_t &blk) {
   unsigned eb{}; // empty block idx
   for (unsigned b = blk.size(); b-- > 0; ) {
     if (blk[b] != 0) {
@@ -51,11 +52,47 @@ auto defrag(block_t &blk) {
   }
 }
 
+auto ffb2(unsigned size, const block_t &blk) -> unsigned {
+  unsigned sz{};
+  for (unsigned i{}; i<blk.size(); ++i) {
+    if (blk[i] == 0) {
+      sz += 1;
+      if (sz == size)
+        return i-size+1;
+    } else {
+      sz = 0;
+    }
+  }
+  return blk.size();
+}
+
+auto defrag2(block_t &blk) {
+  unsigned currid = blk[blk.size()-1];
+  unsigned currlen{};
+  for (unsigned b = blk.size(); b-- > 0; ) {
+    if (blk[b] == currid) {
+      currlen += 1;
+      continue;
+    }
+    if (blk[b+1] != 0) { // check that discovered blocks list is not freespace
+      unsigned freespace = ffb2(currlen, blk);
+      if (freespace < b) {
+        // copy file to freespace if found a better place
+        for (auto x=0; x<currlen; x++) {
+          std::swap(blk[x+freespace], blk[x+b+1]);
+        }
+      }
+    }
+    currid = blk[b];
+    currlen = 1;
+  }
+}
+
 auto checksum(const block_t &blk) -> size_t {
   size_t res{};
   for (unsigned i=0 ; i<blk.size() ; i++) {
     if (blk[i] == 0)
-      break;
+      continue;
     res += (blk[i]-1) * i;
   }
   return res;
@@ -74,8 +111,10 @@ auto print(const block_t &blk) {
 }
 
 auto main() -> int {
-  block_t blocks{};
-  parse(blocks);
-  defrag(blocks);
-  std::cout << checksum(blocks) << std::endl;
+  block_t blocks1{};
+  parse(blocks1);
+  block_t blocks2(blocks1);
+  defrag1(blocks1);
+  defrag2(blocks2);
+  std::cout << checksum(blocks1) << ' ' << checksum(blocks2) << std::endl;
 }
