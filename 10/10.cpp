@@ -83,27 +83,28 @@ auto pos_iterator_t::advance() -> void {
 
 auto pos_t::valid(const grid_t &g) const -> bool { return l<g.g.size() && c<g.g[0].size(); }
 
-auto path(std::set<pos_t> &res, grid_t &g, pos_t p, char level) -> void {
+auto path(std::set<pos_t> &reach, unsigned &npath, grid_t &g, pos_t p, char level) -> void {
   if (p.valid(g) && g[p] == level) {
     if (level == '9') {
-      res.insert(p);
+      reach.insert(p);
+      npath++;
     } else {
-      path(res, g, p.N(), level+1);
-      path(res, g, p.E(), level+1);
-      path(res, g, p.S(), level+1);
-      path(res, g, p.W(), level+1);
+      path(reach, npath, g, p.N(), level+1);
+      path(reach, npath, g, p.E(), level+1);
+      path(reach, npath, g, p.S(), level+1);
+      path(reach, npath, g, p.W(), level+1);
     }
   }
 }
 
 auto main() -> int {
-  unsigned res{};
+  unsigned reachable{}, nbpath{};
   grid_t grid;
   grid.parse(std::cin);
   for (auto it=grid.begin('0'); it!=grid.end(); ++it) {
     std::set<pos_t> trails;
-    path(trails, grid, *it, '0');
-    res += trails.size();
+    path(trails, nbpath, grid, *it, '0');
+    reachable += trails.size();
   }
-  std::cout << res << std::endl;
+  std::cout << reachable << ' ' << nbpath << std::endl;
 }
