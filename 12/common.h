@@ -7,10 +7,14 @@ struct pos_t {
   auto operator==(const pos_t &o) -> bool { return r == o.r && c == o.c; }
   auto operator!=(const pos_t &o) -> bool { return !(*this == o); }
   auto operator<(const pos_t &o) const -> bool { return memcmp(this, &o, sizeof(*this)) < 0; }
-  auto N() const -> pos_t { return pos_t(r-1, c); }
-  auto E() const -> pos_t { return pos_t(r  , c+1); }
-  auto S() const -> pos_t { return pos_t(r+1, c); }
-  auto W() const -> pos_t { return pos_t(r  , c-1); }
+  auto N() const { return pos_t(r-1, c); }
+  auto E() const { return pos_t(r  , c+1); }
+  auto S() const { return pos_t(r+1, c); }
+  auto W() const { return pos_t(r  , c-1); }
+  auto NE() const { return pos_t(r-1, c+1); }
+  auto SE() const { return pos_t(r+1, c+1); }
+  auto SW() const { return pos_t(r+1, c-1); }
+  auto NW() const { return pos_t(r-1, c-1); }
 };
 inline auto operator<<(std::ostream &out, pos_t const& p) -> std::ostream& {
   out << '[' << p.r+1 << ',' << p.c+1 << ']';

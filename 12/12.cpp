@@ -1,13 +1,14 @@
 #include <iostream>
+#include <stdexcept>
 #include <sys/types.h>
 #include <vector>
 #include <algorithm>
 #include "common.h"
 
 struct plot_t { char plot; ushort region; }; // region 0 is undefined region
-struct region_t { ushort fences; ushort surface; };
+struct region_t { ushort fences; ushort corners; ushort surface; };
 auto operator<<(std::ostream &out, region_t const& r) -> std::ostream& {
-  out << '[' << r.surface << ',' << r.fences << ']';
+  out << '[' << r.surface << ',' << r.fences << ',' << r.corners << ']';
   return out;
 }
 
@@ -26,18 +27,44 @@ struct garden_t {
   [[nodiscard]] auto valid(const pos_t &p) const -> bool {
     return p.r < plots.size() && p.c < plots[0].size();
   }
-  [[nodiscard]] auto plot(const pos_t &p) const -> const plot_t& { return plots[p.r][p.c]; }
+  [[nodiscard]] auto plot(const pos_t &p) const -> const plot_t& {
+    if (!valid(p)) throw std::range_error("invalid position");
+    return plots[p.r][p.c];
+  }
   [[nodiscard]] auto plot(const pos_t &p) -> plot_t& { return plots[p.r][p.c]; }
-  [[nodiscard]] auto fences(const pos_t &p) const -> ushort {
-    ushort res{};
-    const plot_t &plot = this->plot(p);
-    auto fct = [&,this](const pos_t &p) -> ushort {
-      return (valid(p) && this->plot(p).plot == plot.plot) ? 0 : 1;
+  [[nodiscard]] auto fences(const pos_t &p) const {
+    std::pair<ushort,ushort> res{}; // first: fences, second: corners
+    char cplot = plot(p).plot;
+    auto ffence = [&,this](const pos_t &p) -> bool {
+      return (valid(p) && plot(p).plot == cplot) ? false : true;
     };
-    res += fct(p.N());
-    res += fct(p.E());
-    res += fct(p.S());
-    res += fct(p.W());
+    auto f1 = ffence(p.N());
+    auto f2 = ffence(p.E());
+    auto f3 = ffence(p.S());
+    auto f4 = ffence(p.W());
+    // count a corner between 2 coninuous fences
+    if (f1 && f2) res.second++;
+    if (f2 && f3) res.second++;
+    if (f3 && f4) res.second++;
+    if (f4 && f1) res.second++;
+    res.first = f1 + f2 + f3 + f4;
+    // open corners
+    try {
+      if (plot(p.N()).plot == cplot && plot(p.E()).plot == cplot && plot(p.NE()).plot != cplot)
+        res.second++;
+    } catch (std::range_error e) {}
+    try {
+      if (plot(p.E()).plot == cplot && plot(p.S()).plot == cplot && plot(p.SE()).plot != cplot)
+        res.second++;
+    } catch (std::range_error e) {}
+    try {
+      if (plot(p.S()).plot == cplot && plot(p.W()).plot == cplot && plot(p.SW()).plot != cplot)
+        res.second++;
+    } catch (std::range_error e) {}
+    try {
+      if (plot(p.W()).plot == cplot && plot(p.N()).plot == cplot && plot(p.NW()).plot != cplot)
+        res.second++;
+    } catch (std::range_error e) {}
     return res;
   }
   [[nodiscard]] auto begin() const { return grid_iterator_t(plots[0].size());};
@@ -71,7 +98,8 @@ struct map_t {
   void merge(ushort r1, ushort r2) {
     reg[r1].fences += reg[r2].fences;
     reg[r1].surface += reg[r2].surface;
-    reg[r2] = {.fences=0, .surface=0};
+    reg[r1].corners += reg[r2].corners;
+    reg[r2] = {.fences=0, .corners=0, .surface=0};
   }
   auto fencing() {
     // add the undefined region (0 should not be used)
@@ -85,20 +113,21 @@ struct map_t {
         reg[r].surface++;
       } else {
         r = reg.size();
-        reg.push_back({.fences=0, .surface=1});
+        reg.push_back({.fences=0, .corners=0, .surface=1});
         garden.plot(*pit).region = mr2r.size();
         mr2r.push_back(r);
       }
       // fences
-      reg[r].fences += garden.fences(*pit);
+      auto counts = garden.fences(*pit);
+      reg[r].fences += counts.first;
+      reg[r].corners += counts.second;
     }
   }
-  auto cost() {
+  auto cost(bool bulk) {
     unsigned res{};
     for (auto r: reg) {
-      if (r.surface) {
-        res += r.surface * r.fences;
-      }
+      if (r.surface)
+        res += r.surface * (bulk ? r.corners : r.fences);
     }
     return res;
   }
@@ -108,5 +137,5 @@ auto main() -> int {
   map_t map;
   map.garden.parse(std::cin);
   map.fencing();
-  std::cout << map.cost() << std::endl;
+  std::cout << map.cost(false) << ' ' << map.cost(true) << std::endl;
 }
