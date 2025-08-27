@@ -3,7 +3,7 @@
 #include <sys/types.h>
 #include <vector>
 #include <algorithm>
-#include "common.h"
+#include "position.h"
 
 struct plot_t { char plot; ushort region; }; // region 0 is undefined region
 struct region_t { ushort fences; ushort corners; ushort surface; };
@@ -24,18 +24,18 @@ struct garden_t {
       plots.push_back(l);
     }
   }
-  [[nodiscard]] auto valid(const pos_t &p) const -> bool {
+  [[nodiscard]] auto valid(const pos_t<ushort> &p) const -> bool {
     return p.r < plots.size() && p.c < plots[0].size();
   }
-  [[nodiscard]] auto plot(const pos_t &p) const -> const plot_t& {
+  [[nodiscard]] auto plot(const pos_t<ushort> &p) const -> const plot_t& {
     if (!valid(p)) throw std::range_error("invalid position");
     return plots[p.r][p.c];
   }
-  [[nodiscard]] auto plot(const pos_t &p) -> plot_t& { return plots[p.r][p.c]; }
-  [[nodiscard]] auto fences(const pos_t &p) const {
+  [[nodiscard]] auto plot(const pos_t<ushort> &p) -> plot_t& { return plots[p.r][p.c]; }
+  [[nodiscard]] auto fences(const pos_t<ushort> &p) const {
     std::pair<ushort,ushort> res{}; // first: fences, second: corners
     char cplot = plot(p).plot;
-    auto ffence = [&,this](const pos_t &p) -> bool {
+    auto ffence = [&,this](const pos_t<ushort> &p) -> bool {
       return (valid(p) && plot(p).plot == cplot) ? false : true;
     };
     auto f1 = ffence(p.N());
@@ -68,7 +68,7 @@ struct garden_t {
     return res;
   }
   [[nodiscard]] auto begin() const { return grid_iterator_t(plots[0].size());};
-  [[nodiscard]] auto end() const { return grid_iterator_t(plots[0].size(), pos_t(plots.size(), 0)); };
+  [[nodiscard]] auto end() const { return grid_iterator_t(plots[0].size(), pos_t<ushort>(plots.size(), 0)); };
 };
 
 struct map_t {
@@ -77,7 +77,7 @@ struct map_t {
   std::vector<ushort> mr2r; // map region to region idx;
 
   // attributes a region id for the plot or 0 if new region
-  auto region(pos_t p) -> ushort {
+  auto region(pos_t<ushort> p) -> ushort {
     ushort r1{}, r2{};
     if (garden.valid(p.N()) && garden.plot(p.N()).plot == garden.plot(p).plot && garden.plot(p.N()).region)
       r1 = mr2r[ garden.plot(p.N()).region ];

@@ -1,8 +1,9 @@
 #include <iostream>
 #include <cstring>
 
+template<typename POS>
 struct pos_t {
-  ushort r{}, c{}; // indexes: from 0 to size-1
+  POS r{}, c{}; // indexes: from 0 to size-1
 
   auto operator==(const pos_t &o) -> bool { return r == o.r && c == o.c; }
   auto operator!=(const pos_t &o) -> bool { return !(*this == o); }
@@ -16,7 +17,8 @@ struct pos_t {
   auto SW() const { return pos_t(r+1, c-1); }
   auto NW() const { return pos_t(r-1, c-1); }
 };
-inline auto operator<<(std::ostream &out, pos_t const& p) -> std::ostream& {
+template<typename POS>
+inline auto operator<<(std::ostream &out, pos_t<POS> const& p) -> std::ostream& {
   out << '[' << p.r+1 << ',' << p.c+1 << ']';
   return out;
 }
@@ -25,11 +27,11 @@ inline auto operator<<(std::ostream &out, pos_t const& p) -> std::ostream& {
 // from NW to SW
 struct grid_iterator_t {
   const ushort rsize;
-  pos_t p;
+  pos_t<ushort> p;
   grid_iterator_t(ushort row_size) : rsize(row_size), p({}) {}
-  grid_iterator_t(ushort row_size, const pos_t &pos) : rsize(row_size), p(pos) {}
+  grid_iterator_t(ushort row_size, const pos_t<ushort> &pos) : rsize(row_size), p(pos) {}
 
-  auto operator*() const -> pos_t { return p; }
+  auto operator*() const -> pos_t<ushort> { return p; }
   auto operator++() -> grid_iterator_t& {
     if (p.c == rsize-1)
       p.r++;
