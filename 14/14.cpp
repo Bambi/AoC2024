@@ -22,9 +22,9 @@ struct robot_t {
 
 struct robots_t {
   std::vector<robot_t> robots;
+  ushort rmax{}, cmax{};
 
   auto parse(std::istream &f) {
-    std::pair<ushort,ushort> max;
     while (!f.eof()) {
       std::string line;
       std::getline(std::cin, line);
@@ -32,15 +32,14 @@ struct robots_t {
         robot_t r;
         r.parse(line);
         robots.push_back(r);
-        if (r.p.r > max.first) max.first = r.p.r;
-        if (r.p.c > max.second) max.second = r.p.c;
+        if (r.p.r > rmax) rmax = r.p.r;
+        if (r.p.c > cmax) cmax = r.p.c;
       }
     }
-    max.first += 1;
-    max.second += 1;
-    return max;
+    rmax += 1;
+    cmax += 1;
   }
-  auto advance(ushort seconds, ushort rmax, ushort cmax) {
+  auto advance(ushort seconds) {
     for (auto &r: robots) {
       r.p.r = (r.p.r + r.v.r * seconds) % rmax;
       if (r.p.r < 0) r.p.r += rmax;
@@ -49,23 +48,49 @@ struct robots_t {
     }
   }
   auto print() {
+    std::vector<bool> map(rmax * cmax, false);
     for (auto r: robots) {
-      std::cout << r.p << ' ';
+      map[r.p.r*cmax + r.p.c] = true;
     }
-    std::cout << std::endl;
+    // check we have 'seq' continuous robots on a line
+    auto check = [=, this](ushort seq) -> bool {
+      for (ushort i=0; i<rmax; i++) {
+        ushort seq_count{};
+        for (ushort j=0; j<cmax; j++) {
+          if (map[i*cmax + j])
+            seq_count++;
+          else
+            seq_count = 0;
+          if (seq_count == seq)
+            return true;
+        }
+      }
+      return false;
+    };
+    if (check(10)) {
+      for (ushort i=0; i<map.size(); ++i) {
+        if (i%cmax == 0) std::cout << std::endl;
+        std::cout << (map[i] ? '*':'.');
+      }
+      std::cout << std::endl;
+      return true;
+    }
+    return false;
   }
-  auto count(ushort mr, ushort mc) {
+  auto count() {
     ushort c1{}, c2{}, c3{}, c4{};
+    ushort rmax = this->rmax / 2;
+    ushort cmax = this->cmax / 2;
     for (auto r: robots) {
-      if (r.p.r < mr) {
-        if (r.p.c < mc)
+      if (r.p.r < rmax) {
+        if (r.p.c < cmax)
           c1 += 1;
-        else if (r.p.c > mc)
+        else if (r.p.c > cmax)
           c2 += 1;
-      } else if (r.p.r > mr) {
-        if (r.p.c < mc)
+      } else if (r.p.r > rmax) {
+        if (r.p.c < cmax)
           c3 += 1;
-        else if (r.p.c > mc)
+        else if (r.p.c > cmax)
           c4 += 1;
       }
     }
@@ -75,7 +100,17 @@ struct robots_t {
 
 auto main() -> int {
   robots_t r;
-  auto max = r.parse(std::cin);
-  r.advance(100, max.first, max.second);
-  std::cout << r.count(max.first/2, max.second/2) << std::endl;
+  r.parse(std::cin);
+  r.advance(100);
+  std::cout << r.count();
+  if (r.cmax > 100) {
+    for (unsigned i=0; i<1'000'000; ++i) {
+      r.advance(1);
+      if (r.print()) {
+        std::cout << i+101;
+        break;
+      }
+    }
+  }
+  std::cout << std::endl;
 }
