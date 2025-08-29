@@ -8,7 +8,7 @@ set(CMAKE_CXX_CLANG_TIDY clang-tidy -checks=-*,modernize-*)
 set(CMAKE_BUILD_TYPE Debug)
 include_directories(common)
 
-foreach(day RANGE 1 14)
+foreach(day RANGE 1 15)
 add_executable(${day} ${day}/${day}.cpp)
 endforeach()
 add_executable(82 8/82.cpp)
