@@ -30,6 +30,11 @@ struct grid_iterator_t {
   pos_t<ushort> p;
   grid_iterator_t(ushort row_size) : rsize(row_size), p({}) {}
   grid_iterator_t(ushort row_size, const pos_t<ushort> &pos) : rsize(row_size), p(pos) {}
+  using value_type = ushort;
+  using difference_type = std::ptrdiff_t;
+  using pointer = ushort*;
+  using reference = ushort&;
+  using iterator_category = std::forward_iterator_tag;
 
   auto operator*() const -> pos_t<ushort> { return p; }
   auto operator++() -> grid_iterator_t& {
@@ -46,4 +51,3 @@ struct grid_iterator_t {
   auto operator==(const grid_iterator_t &o) -> bool { return p == o.p; }
   auto operator!=(const grid_iterator_t &o) -> bool { return !(*this == o); }
 };
-

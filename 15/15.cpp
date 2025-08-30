@@ -1,16 +1,13 @@
 #include <iostream>
 #include <sys/types.h>
-#include <vector>
 #include <string>
 #include <functional>
 #include <cassert>
-#include "position.h"
+#include "grid.h"
 
-using rpos_t = pos_t<ushort>;
-
-struct grid_t {
-  std::vector<std::string> g;
-  rpos_t p{};
+struct grid_t : public aoc::grid<char> {
+  grid<char>::iterator p;
+  grid_t() : p(_data) {};
 
   auto parse(std::istream &f) {
     ushort nb{};
@@ -22,37 +19,34 @@ struct grid_t {
       } else {
         auto pos = line.find('@');
         if (pos != std::string::npos) {
-          p.c = pos;
-          p.r = nb;
+          p.set(nb, pos);
           line[pos] = '.';
         }
-        g.push_back(line);
+        row_type l(line.begin(), line.end());
+        _data.push_back(l);
       }
       nb++;
     }
   }
   auto print() {
-    for (auto l: g)
+    for (auto l: _data)
       std::cout << l << std::endl;
     std::cout << p << std::endl;
   }
-  auto box(const rpos_t &p) { return g[p.r][p.c]; }
-  auto begin() { return grid_iterator_t(g[0].size()); }
-  auto end() { return grid_iterator_t(g[0].size(), rpos_t(g.size(),0)); }
-  static auto fctdir(char dir) {
+  static auto fctdir(char dir) -> iterator (iterator::*)()const {
     switch(dir) {
-      case '^': return &rpos_t::N;
-      case 'v': return &rpos_t::S;
-      case '<': return &rpos_t::W;
-      case '>': return &rpos_t::E;
+      case '^': return &iterator::N;
+      case 'v': return &iterator::S;
+      case '<': return &iterator::W;
+      case '>': return &iterator::E;
     }
     assert(false);
   }
-  auto find_free(char d, rpos_t p) {
-    rpos_t np = std::invoke(fctdir(d), p);
-    switch (box(np)) {
+  auto find_free(char d, iterator &p) {
+    iterator np = std::invoke(fctdir(d), p);
+    switch (*np) {
       case '.': return np;
-      case '#': return rpos_t(0,0);
+      case '#': return end();
       case 'O': return find_free(d, np);
     }
     assert(false);
@@ -64,10 +58,10 @@ struct grid_t {
         continue;
       for (auto dir: l) {
         auto fpos = find_free(dir, p);
-        if (fpos != rpos_t(0,0)) {
+        if (fpos != end()) {
           auto npos = std::invoke(fctdir(dir), p);
           if (fpos != npos)
-            std::swap(g[npos.r][npos.c], g[fpos.r][fpos.c]);
+            std::swap(*npos, *fpos);
           p = npos;
         }
       }
@@ -76,8 +70,8 @@ struct grid_t {
   auto gps_sum() {
     unsigned res{};
     for (auto it=begin(); it!=end(); ++it) {
-      if (box(*it) == 'O')
-        res += (*it).r*100 + (*it).c;
+      if (*it == 'O')
+        res += it.row()*100 + it.col();
     }
     return res;
   }
@@ -89,3 +83,6 @@ auto main() -> int {
   grid.move(std::cin);
   std::cout << grid.gps_sum() << std::endl;
 }
+
+#define _DGRID_H_IMPL
+#include "grid.h"
