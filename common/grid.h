@@ -64,6 +64,9 @@ namespace aoc {
 
     iterator begin() { return iterator(_data, 0); }
     iterator end()   { return iterator(_data, _end(_data)); }
+    iterator at(size_t row, size_t col) { auto it=begin(); it.set(row, col); return it; }
+    iterator begin() const { return iterator(const_cast<data_type&>(_data), 0); }
+    iterator end()   const { return iterator(const_cast<data_type&>(_data), _end(_data)); }
   };
 }
 

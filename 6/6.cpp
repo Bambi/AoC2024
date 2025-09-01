@@ -1,129 +1,97 @@
-#include <cstddef>
 #include <iostream>
 #include <string>
-#include <vector>
+#include <array>
 #include <functional>
-#include <cstring>
 #include <set>
-#include <tuple>
+#include <sys/types.h>
+#include "grid.h"
 
-struct pos_t {
-  size_t l{}, c{}; // indexes: from 0 to size-1
-};
-auto operator<<(std::ostream &out, pos_t const& p) -> std::ostream& {
-  out << '[' << p.l+1 << ',' << p.c+1 << ']';
-  return out;
-}
-auto operator==(const pos_t &a, const pos_t &b) -> bool {
-  return a.l == b.l && a.c == b.c;
-}
-
-struct dir_t {
-  static const std::array<std::function<pos_t (pos_t)>, 4> advance;
-  enum Dir { N, E, S, W } dir{Dir::N};
-
-  [[nodiscard]] auto rotate() const -> dir_t {
-    return dir_t(static_cast<Dir>((dir + 1) % 4));
-  }
-};
-const std::array<std::function<pos_t (pos_t p)>, 4> dir_t::advance = {
-  [](pos_t p){ p.l -= 1; return p; }, // N
-  [](pos_t p){ p.c += 1; return p; }, // E
-  [](pos_t p){ p.l += 1; return p; }, // S
-  [](pos_t p){ p.c -= 1; return p; }, // W
-};
-auto operator<<(std::ostream &out, dir_t const& p) -> std::ostream& {
-  static const char l[] = { 'N', 'E', 'S', 'W' }; // NOLINT(modernize-avoid-c-arrays)
-  out << l[p.dir];
-  return out;
-}
-
-struct grid_t {
-  std::vector<std::string> grid;
-
-  auto parse() -> pos_t {
-    pos_t res;
-    for (std::string line; std::getline(std::cin, line);) {
+struct grid_t : public aoc::grid<char> {
+  struct dir_t {
+    enum Dir { N, E, S, W } dir{Dir::N};
+    [[nodiscard]] auto rotate() const -> dir_t {
+      return dir_t(static_cast<Dir>((dir + 1) % 4));
+    }
+    auto advance(iterator it) -> iterator {
+      static const std::array<iterator (iterator::*)()const, 4> _adv = {
+        &aoc::grid<char>::iterator::N,
+        &aoc::grid<char>::iterator::E,
+        &aoc::grid<char>::iterator::S,
+        &aoc::grid<char>::iterator::W,
+      };
+      return std::invoke(_adv[dir], it);
+    }
+  };
+  auto parse(std::istream &f) -> iterator {
+    iterator res(_data);
+    for (std::string line; std::getline(f, line);) {
       size_t start = line.find('^');
       if (start != std::string::npos) {
         // record starting point & replace ^ by .
-        res = pos_t(grid.size(), start);
+        res.set(_data.size(), start);
         line[start] = '.';
       }
-      grid.push_back(line);
+      _data.emplace_back(line.begin(), line.end());
     }
     return res;
   }
-
-  auto valid(pos_t &p) const -> bool {
-    return p.l < grid.size() && p.c < grid[0].size(); 
+  auto move(iterator pos) {
+    size_t paradox{};
+    std::set<size_t> visited{};
+    dir_t dir(dir_t::N);
+    while(pos != end()) {
+      if (peek(dir.advance(pos)) == '#') {
+        dir = dir.rotate();
+      } else {
+        auto npos = dir.advance(pos);
+        if (!visited.contains(npos._idx) && simulate(pos, dir)) {
+          paradox +=1;
+        }
+        visited.insert(pos._idx);
+        pos = npos;
+      }
+    }
+    std::cout << visited.size() << ' ' << paradox << std::endl;
   }
-
-  [[nodiscard]] auto get_next(pos_t p, dir_t d) const -> char {
-    auto np = dir_t::advance[d.dir](p);
-    if (valid(np))
-      return grid[np.l][np.c];
+  auto simulate(iterator p, dir_t d) -> bool {
+    auto obs = d.advance(p); // obstacle position
+    if (obs == end())
+      return false;
+    std::set<std::pair<size_t, dir_t>> visited{};
+    d = d.rotate();
+    while (p != end()) {
+      if (peek(d.advance(p)) == '#' || d.advance(p) == obs) {
+        d = d.rotate();
+      } else {
+        std::pair<size_t, dir_t> t = std::make_pair(p._idx, d);
+        if (visited.contains(t)) {
+          return true;
+        } else {
+          visited.insert(t);
+          p = d.advance(p);
+        }
+      }
+    }
+    return false;
+  }
+  [[nodiscard]] auto peek(iterator it) const -> char {
+    if (it != end())
+      return *it;
     else
       return '\0';
   }
 };
   
-auto operator<(const pos_t &a, const pos_t &b) -> bool
-{
-  return memcmp(&a, &b, sizeof(a)) < 0;
-}
-auto operator<(const std::tuple<pos_t, dir_t> &a, const std::tuple<pos_t, dir_t> &b) -> bool
-{
-  if (std::get<0>(a).l < std::get<0>(b).l) return true;
-  if (std::get<0>(b).l < std::get<0>(a).l) return false;
-  if (std::get<0>(a).c < std::get<0>(b).c) return true;
-  if (std::get<0>(b).c < std::get<0>(a).c) return false;
-  return std::get<1>(a).dir < std::get<1>(b).dir;
-}
-
-auto simulate(const grid_t g, pos_t p, dir_t d) -> bool {
-  pos_t obs = dir_t::advance[d.dir](p); // obstacle psoition
-  std::set<std::tuple<pos_t, dir_t>> visited{};
-  d = d.rotate();
-  unsigned nb{};
-  while (g.valid(p)) {
-    if (g.get_next(p, d) == '#' || dir_t::advance[d.dir](p) == obs) {
-      d = d.rotate();
-    } else {
-      std::tuple<pos_t, dir_t> t = std::make_tuple(p, d);
-      if (visited.contains(t)) {
-        return true;
-      } else {
-        visited.insert(t);
-        p = dir_t::advance[d.dir](p);
-        nb += 1;
-      }
-    }
-  }
-  return false;
-}
-  
-auto move(grid_t grid, pos_t pos) {
-  size_t paradox{};
-  std::set<pos_t> visited{};
-  dir_t dir(dir_t::N);
-  while(grid.valid(pos)) {
-    if (grid.get_next(pos, dir) == '#') {
-      dir = dir.rotate();
-    } else {
-      auto npos = dir_t::advance[dir.dir](pos);
-      if (!visited.contains(npos) && simulate(grid, pos, dir)) {
-        paradox +=1;
-      }
-      visited.insert(pos);
-      pos = npos;
-    }
-  }
-  std::cout << visited.size() << ' ' << paradox << std::endl;
-}
-
 auto main() -> int {
   grid_t grd;
-  pos_t pos = grd.parse();
-  move(grd, pos);
+  auto pos = grd.parse(std::cin);
+  grd.move(pos);
+}
+
+#define _GRID_H_IMPL
+#include "grid.h"
+auto operator<(const std::pair<size_t, grid_t::dir_t> &a, const std::pair<size_t, grid_t::dir_t> &b) -> bool {
+  if (a.first < b.first) return true;
+  if (a.first > b.first) return false;
+  return a.second.dir < b.second.dir;
 }
