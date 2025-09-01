@@ -11,6 +11,7 @@ namespace aoc {
     using row_type = std::vector<T>;
     using data_type = std::vector<row_type>;
     data_type _data;
+    static size_t _end(const data_type &d) { return d.size() * d[0].size(); }
 
     struct iterator {
       data_type &_g;
@@ -51,10 +52,10 @@ namespace aoc {
       auto operator>=(const iterator& o) const -> bool { return _idx >= o._idx; }
       auto row() const { return _idx / _cols(); }
       auto col() const { return _idx % _cols(); }
-      auto N() const  { return iterator(_g, _idx - _cols()); }
-      auto E() const  { return iterator(_g, _idx + 1); }
-      auto S() const  { return iterator(_g, _idx + _cols()); }
-      auto W() const  { return iterator(_g, _idx - 1); }
+      auto N() const  { return iterator(_g, _idx >= _cols() ? (_idx - _cols()) : grid::_end(_g)); }
+      auto E() const  { return iterator(_g, (_idx+1)%_cols() > _idx%_cols() ? _idx+1 : grid::_end(_g)); }
+      auto S() const  { return iterator(_g, _idx/_cols() < _g.size()-1 ? _idx + _cols() : grid::_end(_g)); }
+      auto W() const  { return iterator(_g, (_idx-1)%_cols() < _idx%_cols() ? _idx-1 : grid::_end(_g)); }
       auto NE() const { return iterator(_g, _idx - _cols()+1); }
       auto SE() const { return iterator(_g, _idx + _cols()+1); }
       auto SW() const { return iterator(_g, _idx + _cols()-1); }
@@ -62,11 +63,10 @@ namespace aoc {
     };
 
     iterator begin() { return iterator(_data, 0); }
-    iterator end()   { return iterator(_data, _data.size() * _data[0].size()); }
+    iterator end()   { return iterator(_data, _end(_data)); }
   };
 }
 
-// template<typename T>
 auto operator<<(std::ostream &out, typename aoc::grid<char>::iterator const& i) -> std::ostream&;
 auto operator<<(std::ostream &out, aoc::grid<char>::row_type const&l) -> std::ostream&;
 #endif // _GRID_H
