@@ -15,10 +15,20 @@ namespace aoc {
     size_t cols_; // number of columns
     enum dir { N, S, E, W };
     static const size_t npos = -1; // illegal index
+    static auto inv(dir d) -> dir {
+      switch (d) {
+        case dir::N: return dir::S;
+        case dir::S: return dir::N;
+        case dir::E: return dir::W;
+        case dir::W: return dir::E;
+      }
+      std::abort();
+    }
 
     auto operator()(size_t r, size_t c) -> T& { return data_[r * cols_ + c]; }
     auto operator()(size_t idx) -> T& { return data_[idx]; }
-    auto add_line(std::string_view l) { std::ranges::copy(l, std::back_inserter(data_)); cols_ = l.size(); }
+    auto add_data(const std::string& l) { std::ranges::copy(l, std::back_inserter(data_)); cols_ = l.size(); }
+    auto add_data(const T& d) { data_.push_back(d); }
     auto peek(size_t idx, dir d) const -> size_t {
       if (idx == npos) return npos;
       switch (d) {
@@ -34,22 +44,26 @@ namespace aoc {
     auto rows() const -> size_t { return data_.size() / cols_; }
     auto cols() const -> size_t { return cols_; }
 
-    struct h_iterator {
+    struct dir_iterator {
       grid &g_;
-      size_t row_{}, col_{};
-      using iterator_category = std::forward_iterator_tag;
+      size_t idx_{};
+      dir d_;
+      using iterator_category = std::bidirectional_iterator_tag;
       using value_type        = T;
       using difference_type   = std::ptrdiff_t;
       using pointer           = T*;
       using reference         = T&;
 
-      h_iterator(grid &g, size_t row, size_t col=0) : g_(g), row_(row), col_(col) {}
-      auto operator*() const -> reference { return g_(row_, col_); }
-      auto operator->() -> pointer { return &g_(row_, col_); }
-      auto operator++() -> h_iterator& { ++col_; return *this; }
-      auto operator++(int) -> h_iterator& { auto tmp = *this; --(*this); return tmp; }
-      auto operator!=(const h_iterator &o) -> bool { return col_ != o.col_; }
-      auto operator==(const h_iterator &o) -> bool { return col_ == o.col_; }
+      dir_iterator(grid &g, dir dir, size_t idx) : g_(g), idx_(idx), d_(dir) {}
+      auto operator*() const -> reference { return g_.data_[idx_]; }
+      auto operator->() -> pointer { return &g_.data_[idx_]; }
+      auto operator++() -> dir_iterator& { idx_ = g_.peek(idx_, d_); return *this; }
+      auto operator++(int) -> dir_iterator { auto tmp = *this; idx_ = g_.peek(idx_, d_); return tmp; }
+      auto operator--() -> dir_iterator& { idx_ = g_.peek(idx_, inv(d_)); return *this; }
+      auto operator--(int) -> dir_iterator { auto tmp = *this; idx_ = g_.peek(idx_, inv(d_)); return tmp; }
+      auto operator==(const dir_iterator &o) -> bool { return d_ != o.d_ || idx_ != o.idx_; }
+      auto operator==(std::default_sentinel_t) const -> bool { return idx_ == npos; }
+      auto move_card(dir dir) const -> dir_iterator { return { g_, d_, g_.peek(idx_, dir) }; }
     };
 
     struct iterator {
@@ -74,7 +88,7 @@ namespace aoc {
       }
       // bidir
       auto operator--() -> iterator& { --idx_; return *this; }
-      iterator operator--(int) { iterator prev = *this; --(*this); return prev; }
+      auto operator--(int) -> iterator { iterator prev = *this; --(*this); return prev; }
       // random access
       auto operator+(difference_type n) const -> iterator { return iterator(g_, idx_ + n); }
       auto operator-(difference_type n) const -> iterator { return iterator(g_, idx_ - n); }
@@ -97,8 +111,6 @@ namespace aoc {
     iterator at(size_t row, size_t col) { auto it=begin(); it.set(row, col); return it; }
     iterator begin() const { return iterator(const_cast<grid&>(*this), 0); }
     iterator end()   const { return iterator(const_cast<grid&>(*this), end_(data_)); }
-    auto h_begin(size_t r) const -> h_iterator { return h_iterator(*this, r, 0); }
-    auto h_end(size_t r) const -> h_iterator { return h_iterator(*this, r, cols_); }
   };
 }
 
@@ -120,4 +132,5 @@ auto operator<<(std::ostream &out, aoc::grid<char> const& g) -> std::ostream& {
   }
   return out;
 }
+void printit(size_t cols, size_t idx) { std::cout << '[' << (idx/cols+1) << ',' << (idx%cols+1) << ']' << std::endl; }
 #endif

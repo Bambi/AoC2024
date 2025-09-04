@@ -24,7 +24,7 @@ struct grid_t : public aoc::grid<char> {
         r = lg; c= start;
         line[start] = '.';
       }
-      add_line(line);
+      add_data(line);
       lg++;
     }
     return {*this, r, c};

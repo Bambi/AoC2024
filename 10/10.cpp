@@ -7,7 +7,7 @@
 struct grid_t : public aoc::grid<char> {
   auto parse(std::istream &f) {
     for (std::string line; std::getline(f, line);) {
-      add_line(line);
+      add_data(line);
     }
   }
   auto path(std::set<size_t> &reach, unsigned &npath, size_t p, char level) -> void {

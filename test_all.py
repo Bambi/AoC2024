@@ -46,6 +46,8 @@ def run(day, inputf):
     (14,"ex1",      "12\n"),
     (15,"ex1",      "2028\n"),
     (15,"ex2",      "10092\n"),
+    (152,"ex2",      "9021\n"),
+    (152,"ex3",      "618\n"),
 ])
 def test_day(day, file, result):
     assert run(day, file) == result

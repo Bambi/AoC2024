@@ -1,109 +1,140 @@
+#include <cstddef>
+#include <cstdio>
 #include <iostream>
+#include <iterator>
 #include <sys/types.h>
 #include <string>
-#include <functional>
 #include <algorithm>
-#include <cassert>
+#include <queue>
+#include <set>
+#include <utility>
+#include <optional>
 #include "grid.h"
 
 struct grid_t : public aoc::grid<char> {
-  grid<char>::iterator p;
-  grid_t() : p(_data) {};
-
-  auto parse(std::istream &f) {
-    ushort nb{};
+  using swapq = std::queue<std::pair<size_t, size_t>>;
+  auto parse(std::istream &f) -> iterator {
+    ushort nb{}, r{}, c{};
     while (!f.eof()) {
       std::string line;
       std::getline(f, line);
       if (line.empty()) {
         break;
       } else {
-        row_type r;
-        r.resize(line.size() * 2);
+        auto p = line.find('@');
+        if (p != std::string::npos) {
+          cols_ = line.size() * 2;
+          line[p] = '.';
+          c = p*2;
+          r = nb;
+        }
         std::ranges::for_each(line, [&](char x) {
           switch (x) {
-            case '@': r.push_back('.'); r.push_back('.'); return;
-            case 'O': r.push_back('['); r.push_back(']'); return;
+            case '@': add_data('.'); add_data('.'); return;
+            case 'O': add_data('['); add_data(']'); return;
             case '.':
             case '#':
-              r.push_back(x); r.push_back(x); return;
+              add_data(x); add_data(x); return;
           }
         });
-        _data.push_back(r);
-        if (auto pos = line.find('@'); pos != std::string::npos) {
-          p.set(nb, pos*2);
-        }
       }
       nb++;
     }
+    return {*this, r, c};
   }
-  auto print() {
-    for (auto l: _data)
-      std::cout << l << std::endl;
-    std::cout << p << std::endl;
-  }
-  static auto fctdir(char dir) -> iterator (iterator::*)()const {
+  static auto fctdir(char dir) -> enum dir {
     switch(dir) {
-      case '^': return &iterator::N;
-      case 'v': return &iterator::S;
-      case '<': return &iterator::W;
-      case '>': return &iterator::E;
+      case '^': return dir::N;
+      case 'v': return dir::S;
+      case '<': return dir::W;
+      case '>': return dir::E;
     }
-    assert(false);
+    std::abort();
   }
-  auto find_free(char d, iterator &p) {
-    iterator np = std::invoke(fctdir(d), p);
-    switch (*np) {
-      case '.': return np;
-      case '#': return end();
-      case 'O': return find_free(d, np);
+  [[nodiscard]]
+  auto check_new_branch(dir_iterator it) const -> std::optional<dir_iterator> {
+    if (*it == '[') {
+      auto it2 = it.move_card(dir::E);
+      if (*std::prev(it2) == ']')
+        return std::nullopt;
+      else
+        return it2;
+    } else if (*it == ']') {
+      auto it2 = it.move_card(dir::W);
+      if (*std::prev(it2) == '[')
+        return std::nullopt;
+      else
+        return it2;
     }
-    assert(false);
+    return std::nullopt;        
   }
-  template<typename iterator>
-  auto find_hdir(iterator it) -> bool {
-    auto next = ++it;
-    if (next == std::default_sentinel)
-      return false;
-    if (*next == '.') {
-      std::swap(*it, *next);
-      return true;
-    } else if (*next == '#') {
-      return false;
-    } else if (find_hdir(next)) {
-      std::swap(*it, *next);
-      return true;
+  auto find_free(dir_iterator it, swapq& swaps) -> size_t {
+    if (it == std::default_sentinel_t() || *it == '#') {
+      return npos;
+    } else if (*it == '.') {
+      return it.idx_;
+    } else {
+      if (it.d_ == dir::E || it.d_ == dir::W) {
+        auto res = find_free(std::next(it), swaps);
+        if (res != npos) {
+          swaps.emplace(it.idx_, res);
+          return it.idx_;
+        } else
+          return npos;
+      } else {
+        auto res1 = find_free(std::next(it), swaps);
+        if (res1 == npos)
+          return npos;
+        auto it2 = check_new_branch(it);
+        if (it2) {
+          auto res2 = find_free(std::next(*it2), swaps);
+          if (res2 != npos) {
+            swaps.emplace(it.idx_, res1);
+            swaps.emplace((*it2).idx_, res2);
+            return it.idx_;
+          } else
+            return npos;
+        } else {
+          swaps.emplace(it.idx_, res1);
+          return it.idx_;
+        }
+      }
     }
-    return false;
   }
-  auto find_free(iterator &p, char d) {
-    switch (d) {
-      case '>': find_hdir(p.hiterator()); return;
-      case '<': find_hdir(p.rhiterator()); return;
+  auto find_free(size_t pos, char d) -> size_t {
+    auto it = dir_iterator(*this, fctdir(d), pos);
+    swapq swaps;
+    // some operations might be multiple times in the queue
+    // we use a set to ensure that each operation is treated only once
+    std::set<std::pair<size_t,size_t>> opdone;
+    if (find_free(std::next(it), swaps) != npos) {
+      while (!swaps.empty()) {
+        auto pair = swaps.front();
+        if (!opdone.contains(pair)) {
+          std::swap((*this)(pair.first), (*this)(pair.second));
+          opdone.insert(pair);
+        }
+        swaps.pop();
+      }
+      return std::next(it).idx_; // advance
     }
-    return;
+    return it.idx_; // keep position
   }
-  auto move(std::istream &f) {
+  auto move(std::istream &f, size_t p) {
     std::string l; 
     while (std::getline(f, l) && !f.eof()) {
       if (l.empty())
         continue;
       for (auto dir: l) {
-        find_free(p, dir);
-        // auto fpos = find_free(dir, p);
-        // if (fpos != end()) {
-        //   auto npos = std::invoke(fctdir(dir), p);
-        //   if (fpos != npos)
-        //     std::swap(*npos, *fpos);
-        //   p = npos;
-        // }
+        auto nextp = find_free(p, dir);
+        p = nextp;
       }
     }
   }
-  auto gps_sum() {
+  auto gps_sum() -> unsigned {
     unsigned res{};
     for (auto it=begin(); it!=end(); ++it) {
-      if (*it == 'O')
+      if (*it == '[')
         res += it.row()*100 + it.col();
     }
     return res;
@@ -112,10 +143,9 @@ struct grid_t : public aoc::grid<char> {
 
 auto main() -> int {
   grid_t grid;
-  grid.parse(std::cin);
-  grid.print();
-  // grid.move(std::cin);
-  // std::cout << grid.gps_sum() << std::endl;
+  auto p = grid.parse(std::cin);
+  grid.move(std::cin, p.idx_);
+  std::cout << grid.gps_sum() << std::endl;
 }
 
 #define _GRID_H_IMPL
