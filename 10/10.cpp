@@ -11,15 +11,15 @@ struct grid_t : public aoc::grid<char> {
     }
   }
   auto path(std::set<size_t> &reach, unsigned &npath, size_t p, char level) -> void {
-    if (p != npos && (*this)(p) == level) {
+    if (p != aoc::npos && (*this)(p) == level) {
       if (level == '9') {
         reach.insert(p);
         npath++;
       } else {
-        path(reach, npath, peek(p, dir::N), level+1);
-        path(reach, npath, peek(p, dir::E), level+1);
-        path(reach, npath, peek(p, dir::S), level+1);
-        path(reach, npath, peek(p, dir::W), level+1);
+        path(reach, npath, peek(p, aoc::dir::N), level+1);
+        path(reach, npath, peek(p, aoc::dir::E), level+1);
+        path(reach, npath, peek(p, aoc::dir::S), level+1);
+        path(reach, npath, peek(p, aoc::dir::W), level+1);
       }
     }
   }

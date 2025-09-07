@@ -27,12 +27,12 @@ struct grid_t : public aoc::grid<char> {
     }
     return {*this, r, c};
   }
-  static auto fctdir(char dir) -> enum dir {
+  static auto fctdir(char dir) -> enum aoc::dir {
     switch(dir) {
-      case '^': return dir::N;
-      case 'v': return dir::S;
-      case '<': return dir::W;
-      case '>': return dir::E;
+      case '^': return aoc::dir::N;
+      case 'v': return aoc::dir::S;
+      case '<': return aoc::dir::W;
+      case '>': return aoc::dir::E;
     }
     std::abort();
   }
@@ -40,7 +40,7 @@ struct grid_t : public aoc::grid<char> {
     size_t np = peek(p, fctdir(d));
     switch ((*this)(np)) {
       case '.': return np;
-      case '#': return npos;
+      case '#': return aoc::npos;
       case 'O': return find_free(d, np);
     }
     assert(false);
@@ -52,7 +52,7 @@ struct grid_t : public aoc::grid<char> {
         continue;
       for (auto dir: l) {
         auto fpos = find_free(dir, p);
-        if (fpos != npos) {
+        if (fpos != aoc::npos) {
           auto nextp = peek(p, fctdir(dir));
           if (nextp != fpos)
             std::swap((*this)(nextp), (*this)(fpos));

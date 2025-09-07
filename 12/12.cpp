@@ -1,9 +1,9 @@
+#include <cstddef>
 #include <iostream>
-#include <stdexcept>
 #include <sys/types.h>
 #include <vector>
 #include <algorithm>
-#include "position.h"
+#include "grid.h"
 
 struct plot_t { char plot; ushort region; }; // region 0 is undefined region
 struct region_t { ushort fences; ushort corners; ushort surface; };
@@ -12,36 +12,25 @@ auto operator<<(std::ostream &out, region_t const& r) -> std::ostream& {
   return out;
 }
 
-struct garden_t {
-  std::vector< std::vector<plot_t>> plots;
-
+struct garden_t : public aoc::grid<plot_t> {
   auto parse(std::istream &f) {
     for (std::string line; std::getline(f, line);) {
-      std::vector<plot_t> l;
       for (auto c: line) {
-        l.push_back({.plot=c, .region=0});
+        add_data({.plot=c, .region=0});
       }
-      plots.push_back(l);
+      add_row();
     }
   }
-  [[nodiscard]] auto valid(const pos_t<ushort> &p) const -> bool {
-    return p.r < plots.size() && p.c < plots[0].size();
-  }
-  [[nodiscard]] auto plot(const pos_t<ushort> &p) const -> const plot_t& {
-    if (!valid(p)) throw std::range_error("invalid position");
-    return plots[p.r][p.c];
-  }
-  [[nodiscard]] auto plot(const pos_t<ushort> &p) -> plot_t& { return plots[p.r][p.c]; }
-  [[nodiscard]] auto fences(const pos_t<ushort> &p) const {
+  [[nodiscard]] auto fences(size_t p) {
     std::pair<ushort,ushort> res{}; // first: fences, second: corners
-    char cplot = plot(p).plot;
-    auto ffence = [&,this](const pos_t<ushort> &p) -> bool {
-      return (valid(p) && plot(p).plot == cplot) ? false : true;
+    auto cplot = (*this)(p).plot;
+    auto ffence = [&,this](size_t p) -> bool {
+      return (p != aoc::npos && (*this)(p).plot == cplot) ? false : true;
     };
-    auto f1 = ffence(p.N());
-    auto f2 = ffence(p.E());
-    auto f3 = ffence(p.S());
-    auto f4 = ffence(p.W());
+    auto f1 = ffence(peek(p, aoc::dir::N));
+    auto f2 = ffence(peek(p, aoc::dir::E));
+    auto f3 = ffence(peek(p, aoc::dir::S));
+    auto f4 = ffence(peek(p, aoc::dir::W));
     // count a corner between 2 coninuous fences
     if (f1 && f2) res.second++;
     if (f2 && f3) res.second++;
@@ -49,26 +38,23 @@ struct garden_t {
     if (f4 && f1) res.second++;
     res.first = f1 + f2 + f3 + f4;
     // open corners
-    try {
-      if (plot(p.N()).plot == cplot && plot(p.E()).plot == cplot && plot(p.NE()).plot != cplot)
+    auto ocorner = [p, cplot, this](aoc::dir d1, aoc::dir d2) -> bool {
+      auto p1 = peek(p, d1);
+      auto p2 = peek(p, d2);
+      if (p1 == aoc::npos || p2 == aoc::npos) return false;
+      auto p3 = peek(p1, d2);
+      return (*this)(p1).plot == cplot && (*this)(p2).plot == cplot && (*this)(p3).plot != cplot;
+    };
+    if (ocorner(aoc::dir::N, aoc::dir::E))
         res.second++;
-    } catch (std::range_error e) {}
-    try {
-      if (plot(p.E()).plot == cplot && plot(p.S()).plot == cplot && plot(p.SE()).plot != cplot)
+    if (ocorner(aoc::dir::E, aoc::dir::S))
         res.second++;
-    } catch (std::range_error e) {}
-    try {
-      if (plot(p.S()).plot == cplot && plot(p.W()).plot == cplot && plot(p.SW()).plot != cplot)
+    if (ocorner(aoc::dir::S, aoc::dir::W))
         res.second++;
-    } catch (std::range_error e) {}
-    try {
-      if (plot(p.W()).plot == cplot && plot(p.N()).plot == cplot && plot(p.NW()).plot != cplot)
+    if (ocorner(aoc::dir::W, aoc::dir::N))
         res.second++;
-    } catch (std::range_error e) {}
     return res;
   }
-  [[nodiscard]] auto begin() const { return grid_iterator_t(plots[0].size());};
-  [[nodiscard]] auto end() const { return grid_iterator_t(plots[0].size(), pos_t<ushort>(plots.size(), 0)); };
 };
 
 struct map_t {
@@ -77,12 +63,14 @@ struct map_t {
   std::vector<ushort> mr2r; // map region to region idx;
 
   // attributes a region id for the plot or 0 if new region
-  auto region(pos_t<ushort> p) -> ushort {
+  auto region(size_t p) -> ushort {
     ushort r1{}, r2{};
-    if (garden.valid(p.N()) && garden.plot(p.N()).plot == garden.plot(p).plot && garden.plot(p.N()).region)
-      r1 = mr2r[ garden.plot(p.N()).region ];
-    if (garden.valid(p.W()) && garden.plot(p.W()).plot == garden.plot(p).plot && garden.plot(p.W()).region)
-      r2 = mr2r[ garden.plot(p.W()).region ];
+    size_t N_plot = garden.peek(p, aoc::dir::N);
+    size_t W_plot = garden.peek(p, aoc::dir::W);
+    if (N_plot != aoc::npos && garden(N_plot).plot == garden(p).plot && garden(N_plot).region)
+      r1 = mr2r[ garden(N_plot).region ];
+    if (W_plot != aoc::npos && garden(W_plot).plot == garden(p).plot && garden(W_plot).region)
+      r2 = mr2r[ garden(W_plot).region ];
     if (r1 == r2)
       return r1;
     else if (r1 == 0 || r2 == 0)
@@ -107,18 +95,18 @@ struct map_t {
     mr2r.push_back({});    
     for (auto pit = garden.begin(); pit != garden.end(); ++pit) {
       // region & surface
-      auto r = region(*pit);
+      auto r = region(pit.idx());
       if (r) {
-        garden.plot(*pit).region = r;
+        pit->region = r;
         reg[r].surface++;
       } else {
         r = reg.size();
         reg.push_back({.fences=0, .corners=0, .surface=1});
-        garden.plot(*pit).region = mr2r.size();
+        pit->region = mr2r.size();
         mr2r.push_back(r);
       }
       // fences
-      auto counts = garden.fences(*pit);
+      auto counts = garden.fences(pit.idx());
       reg[r].fences += counts.first;
       reg[r].corners += counts.second;
     }

@@ -6,12 +6,12 @@
 #include "grid.h"
 
 struct grid_t : public aoc::grid<char> {
-  static auto rotate(dir d) -> dir {
+  static auto rotate(aoc::dir d) -> aoc::dir {
     switch (d) {
-      case dir::N: return dir::E;
-      case dir::E: return dir::S;
-      case dir::S: return dir::W;
-      case dir::W: return dir::N;
+      case aoc::dir::N: return aoc::dir::E;
+      case aoc::dir::E: return aoc::dir::S;
+      case aoc::dir::S: return aoc::dir::W;
+      case aoc::dir::W: return aoc::dir::N;
       default: std::abort();
     }
   }
@@ -32,8 +32,8 @@ struct grid_t : public aoc::grid<char> {
   auto move(size_t pos) {
     size_t paradox{};
     std::set<size_t> visited{};
-    dir cdir(dir::N);
-    while(pos != npos) {
+    aoc::dir cdir(aoc::dir::N);
+    while(pos != aoc::npos) {
       if ((*this)(peek(pos, cdir)) == '#') {
         cdir = rotate(cdir);
       } else {
@@ -47,18 +47,18 @@ struct grid_t : public aoc::grid<char> {
     }
     std::cout << visited.size() << ' ' << paradox << std::endl;
   }
-  auto simulate(size_t p, dir d) -> bool {
+  auto simulate(size_t p, aoc::dir d) -> bool {
     auto obs = peek(p, d); // obstacle position
-    if (obs == npos)
+    if (obs == aoc::npos)
       return false;
-    std::set<std::pair<size_t, dir>> visited{};
+    std::set<std::pair<size_t, aoc::dir>> visited{};
     d = rotate(d);
-    while (p != npos) {
+    while (p != aoc::npos) {
       auto next = peek(p, d);
-      if (next != npos && (next == obs || (*this)(next) == '#')) {
+      if (next != aoc::npos && (next == obs || (*this)(next) == '#')) {
         d = rotate(d);
       } else {
-        std::pair<size_t, dir> t = std::make_pair(p, d);
+        std::pair<size_t, aoc::dir> t = std::make_pair(p, d);
         if (visited.contains(t)) {
           return true;
         } else {
